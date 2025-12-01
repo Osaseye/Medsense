@@ -1,15 +1,39 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaEnvelope, FaLock, FaGoogle, FaApple, FaUserInjured, FaUserNurse } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaUserInjured, FaUserNurse, FaEye, FaEyeSlash, FaSpinner } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [role, setRole] = useState('patient');
+  const { login } = useAuth();
+  const { error, success } = useNotification();
+  const [role, setRole] = useState('patient'); // UI toggle only
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    localStorage.setItem('userRole', role);
-    navigate('/dashboard');
+    setIsLoading(true);
+    try {
+      await login(formData.email, formData.password);
+      success('Welcome back!');
+      navigate('/dashboard');
+    } catch (err) {
+      console.error(err);
+      error(err.message.replace('Firebase: ', ''));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -69,8 +93,12 @@ const Login = () => {
                 </div>
                 <input 
                   type="email" 
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-blue-100 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
                   placeholder="you@example.com"
+                  required
                 />
               </div>
             </div>
@@ -82,10 +110,21 @@ const Login = () => {
                   <FaLock />
                 </div>
                 <input 
-                  type="password" 
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-blue-100 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-12 py-3 rounded-xl border border-blue-100 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
                   placeholder="••••••••"
+                  required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted hover:text-primary transition-colors"
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
               </div>
             </div>
             
@@ -97,28 +136,14 @@ const Login = () => {
               <Link to="/forgot-password" className="text-primary font-bold hover:underline">Forgot Password?</Link>
             </div>
             
-            <button type="submit" className="block w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-primary/30 text-center">
-              Sign In
+            <button 
+              type="submit" 
+              disabled={isLoading}
+              className="block w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-primary/30 text-center disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isLoading ? <><FaSpinner className="animate-spin" /> Signing In...</> : 'Sign In'}
             </button>
           </form>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-blue-100"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-background text-muted">Or continue with</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <button className="flex items-center justify-center gap-2 px-4 py-3 border border-blue-100 rounded-xl hover:bg-blue-50 transition-colors font-medium text-navy bg-white">
-              <FaGoogle className="text-red-500" /> Google
-            </button>
-            <button className="flex items-center justify-center gap-2 px-4 py-3 border border-blue-100 rounded-xl hover:bg-blue-50 transition-colors font-medium text-navy bg-white">
-              <FaApple className="text-black" /> Apple
-            </button>
-          </div>
           
           <p className="text-center text-sm text-muted">
             Don't have an account? <Link to="/register" className="text-primary font-bold hover:underline">Create Account</Link>

@@ -11,6 +11,7 @@ import Adherence from './pages/Adherence';
 import Prescriptions from './pages/Prescriptions';
 import Caregiver from './pages/Caregiver';
 import Settings from './pages/Settings';
+import Patients from './pages/Patients';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Route path="adherence" element={<Adherence />} />
           <Route path="prescriptions" element={<Prescriptions />} />
           <Route path="caregiver" element={<Caregiver />} />
+          <Route path="patients" element={<Patients />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

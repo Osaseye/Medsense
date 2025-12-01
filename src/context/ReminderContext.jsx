@@ -1,5 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNotification } from './NotificationContext';
+import { useAuth } from './AuthContext';
+import { db } from '../firebase';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query } from 'firebase/firestore';
 import { FaCoffee, FaSun, FaMoon, FaClock } from 'react-icons/fa';
 
 const ReminderContext = createContext();
@@ -14,39 +17,33 @@ export const useReminder = () => {
 
 export const ReminderProvider = ({ children }) => {
   const { sendSystemNotification, requestSystemPermission } = useNotification();
-  
-  // Initial dummy data moved from Reminders.jsx
-  const [reminders, setReminders] = useState([
-    {
-      id: 1,
-      time: '08:00',
-      label: 'Morning Meds',
-      medications: ['Lisinopril', 'Vitamin D3'],
-      active: true,
-      icon: <FaCoffee className="text-orange-400" />
-    },
-    {
-      id: 2,
-      time: '14:00',
-      label: 'Afternoon Dose',
-      medications: ['Amoxicillin'],
-      active: true,
-      icon: <FaSun className="text-yellow-400" />
-    },
-    {
-      id: 3,
-      time: '21:00',
-      label: 'Evening Routine',
-      medications: ['Metformin', 'Magnesium'],
-      active: false,
-      icon: <FaMoon className="text-indigo-400" />
-    }
-  ]);
+  const { currentUser } = useAuth();
+  const [reminders, setReminders] = useState([]);
 
   // Request permission on mount
   useEffect(() => {
     requestSystemPermission();
   }, [requestSystemPermission]);
+
+  // Fetch reminders from Firestore
+  useEffect(() => {
+    if (!currentUser) {
+      setReminders([]);
+      return;
+    }
+
+    const q = query(collection(db, 'users', currentUser.uid, 'reminders'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const rems = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        icon: <FaClock className="text-blue-400" /> 
+      }));
+      setReminders(rems);
+    });
+
+    return unsubscribe;
+  }, [currentUser]);
 
   // Check for reminders every minute
   useEffect(() => {
@@ -56,13 +53,33 @@ export const ReminderProvider = ({ children }) => {
       const currentMinutes = now.getMinutes().toString().padStart(2, '0');
       const currentTime = `${currentHours}:${currentMinutes}`;
 
+      // Calculate time 5 minutes from now for early warning
+      const fiveMinsLater = new Date(now.getTime() + 5 * 60000);
+      const laterHours = fiveMinsLater.getHours().toString().padStart(2, '0');
+      const laterMinutes = fiveMinsLater.getMinutes().toString().padStart(2, '0');
+      const timeInFiveMins = `${laterHours}:${laterMinutes}`;
+      
+      const todayString = now.toISOString().split('T')[0];
+
       reminders.forEach(reminder => {
-        if (reminder.active && reminder.time === currentTime) {
-          // Simple check to avoid spamming (in a real app, track 'lastNotified')
-          // For this demo, we assume the interval aligns or we accept one notification per minute match
+        if (!reminder.active) return;
+        
+        // Check date if specified
+        if (reminder.date && reminder.date !== todayString) return;
+
+        // 1. Check for exact time
+        if (reminder.time === currentTime) {
           sendSystemNotification(
             `Time for your ${reminder.label}`, 
             `Take: ${reminder.medications.join(', ')}`
+          );
+        }
+
+        // 2. Check for 5 minutes before
+        if (reminder.time === timeInFiveMins) {
+          sendSystemNotification(
+            `Upcoming Dose: ${reminder.label}`, 
+            `Prepare to take ${reminder.medications.join(', ')} in 5 minutes.`
           );
         }
       });
@@ -70,26 +87,39 @@ export const ReminderProvider = ({ children }) => {
 
     const intervalId = setInterval(checkReminders, 60000); // Check every minute
     
-    // Also check immediately on load/change just in case (optional, maybe skip to avoid instant alerts on refresh)
-    // checkReminders(); 
+    // Run immediately on mount to check if we just missed a minute boundary
+    checkReminders();
 
     return () => clearInterval(intervalId);
   }, [reminders, sendSystemNotification]);
 
-  const addReminder = (reminder) => {
-    setReminders(prev => [...prev, { ...reminder, id: Date.now(), active: true, icon: <FaClock className="text-blue-400" /> }]);
+  const addReminder = async (reminder) => {
+    if (!currentUser) return;
+    await addDoc(collection(db, 'users', currentUser.uid, 'reminders'), {
+      ...reminder,
+      active: true,
+      createdAt: new Date().toISOString()
+    });
   };
 
-  const updateReminder = (id, updatedData) => {
-    setReminders(prev => prev.map(r => r.id === id ? { ...r, ...updatedData } : r));
+  const updateReminder = async (id, updatedData) => {
+    if (!currentUser) return;
+    await updateDoc(doc(db, 'users', currentUser.uid, 'reminders', id), updatedData);
   };
 
-  const deleteReminder = (id) => {
-    setReminders(prev => prev.filter(r => r.id !== id));
+  const deleteReminder = async (id) => {
+    if (!currentUser) return;
+    await deleteDoc(doc(db, 'users', currentUser.uid, 'reminders', id));
   };
 
-  const toggleReminder = (id) => {
-    setReminders(prev => prev.map(r => r.id === id ? { ...r, active: !r.active } : r));
+  const toggleReminder = async (id) => {
+    if (!currentUser) return;
+    const reminder = reminders.find(r => r.id === id);
+    if (reminder) {
+      await updateDoc(doc(db, 'users', currentUser.uid, 'reminders', id), {
+        active: !reminder.active
+      });
+    }
   };
 
   return (

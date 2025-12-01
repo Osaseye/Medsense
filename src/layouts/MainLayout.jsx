@@ -1,22 +1,18 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaHome, FaPills, FaBell, FaChartLine, FaFilePrescription, FaUserNurse, FaCog, FaSignOutAlt, FaBars, FaTimes, FaUserInjured } from 'react-icons/fa';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [role, setRole] = useState('patient');
+  const { userRole, logout, currentUser, userData } = useAuth();
+  
+  const role = userRole || 'patient';
 
-  useEffect(() => {
-    const savedRole = localStorage.getItem('userRole');
-    if (savedRole) {
-      setRole(savedRole);
-    }
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('userRole');
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -37,44 +33,60 @@ const MainLayout = () => {
 
   return (
     <div className="flex h-screen bg-background font-sans text-navy overflow-hidden">
-      {/* Header (Visible on all screens) */}
-      <div className="fixed top-0 left-0 right-0 bg-white z-30 px-6 py-4 shadow-sm flex justify-between items-center">
+      {/* Header (Mobile Only) */}
+      <div className="md:hidden fixed top-0 left-0 right-0 bg-white z-30 px-6 py-4 shadow-sm flex justify-between items-center">
+        <h1 className="text-xl font-heading font-bold text-primary flex items-center gap-2">
+          <img src="/logo.png" alt="MedSense" className="h-8 w-8" /> MedSense
+        </h1>
         <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="text-navy text-2xl p-2 hover:bg-blue-50 rounded-lg transition-colors"
-          >
-            <FaBars />
-          </button>
-          <h1 className="text-xl font-heading font-bold text-primary flex items-center gap-2">
-            <img src="/logo.png" alt="MedSense" className="h-8 w-8" /> MedSense
-          </h1>
+          <Link to="/dashboard/settings" className="text-navy text-xl p-2 hover:bg-blue-50 rounded-full transition-colors">
+            <FaCog />
+          </Link>
+          <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">
+            {userData?.name ? userData.name.charAt(0).toUpperCase() : (role === 'patient' ? 'P' : 'C')}
+          </div>
         </div>
       </div>
 
-      {/* Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-navy/50 z-40 backdrop-blur-sm"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
+      {/* Mobile Bottom Navigation (Floating Cylinder) */}
+      <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+        <div className="bg-white shadow-2xl rounded-full px-6 py-3 flex items-center gap-6 border border-blue-50">
+          <Link to="/dashboard" className={`text-2xl p-2 transition-colors ${location.pathname === '/dashboard' ? 'text-primary' : 'text-gray-400'}`}>
+            <FaHome />
+          </Link>
+          
+          {role === 'patient' ? (
+            <>
+              <Link to="/dashboard/medications" className={`text-2xl p-2 transition-colors ${location.pathname === '/dashboard/medications' ? 'text-primary' : 'text-gray-400'}`}>
+                <FaPills />
+              </Link>
+              <Link to="/dashboard/reminders" className={`text-2xl p-2 transition-colors ${location.pathname === '/dashboard/reminders' ? 'text-primary' : 'text-gray-400'}`}>
+                <FaBell />
+              </Link>
+              <Link to="/dashboard/adherence" className={`text-2xl p-2 transition-colors ${location.pathname === '/dashboard/adherence' ? 'text-primary' : 'text-gray-400'}`}>
+                <FaChartLine />
+              </Link>
+              <Link to="/dashboard/prescriptions" className={`text-2xl p-2 transition-colors ${location.pathname === '/dashboard/prescriptions' ? 'text-primary' : 'text-gray-400'}`}>
+                <FaFilePrescription />
+              </Link>
+            </>
+          ) : (
+            <>
+              {/* Caregiver Mobile Nav Items */}
+              <Link to="/dashboard/patients" className={`text-2xl p-2 transition-colors ${location.pathname === '/dashboard/patients' ? 'text-primary' : 'text-gray-400'}`}>
+                <FaUserInjured />
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
 
-      {/* Sidebar (Fixed Drawer) */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-in-out
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+      {/* Sidebar (Desktop Only) */}
+      <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl flex-col">
         <div className="p-6 border-b border-blue-50 flex justify-between items-center">
           <h1 className="text-2xl font-heading font-bold text-primary flex items-center gap-3">
             <img src="/logo.png" alt="MedSense" className="h-8 w-8" /> MedSense
           </h1>
-          <button 
-            onClick={() => setIsSidebarOpen(false)}
-            className="text-muted hover:text-primary transition-colors"
-          >
-            <FaTimes size={24} />
-          </button>
         </div>
         
         <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
@@ -87,14 +99,12 @@ const MainLayout = () => {
               <NavItem to="/dashboard/reminders" icon={<FaBell />} label="Reminders" />
               <NavItem to="/dashboard/adherence" icon={<FaChartLine />} label="Adherence" />
               <NavItem to="/dashboard/prescriptions" icon={<FaFilePrescription />} label="Prescriptions" />
-              <NavItem to="/dashboard/caregiver" icon={<FaUserNurse />} label="Caregiver Access" />
             </>
           )}
 
           {role === 'caregiver' && (
             <>
               {/* Caregiver specific links can go here */}
-              {/* For now, they just see Dashboard and Settings */}
             </>
           )}
           
@@ -107,10 +117,10 @@ const MainLayout = () => {
         <div className="p-6 border-t border-blue-50 bg-blue-50/30">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
-              {role === 'patient' ? 'JD' : 'CN'}
+              {userData?.name ? userData.name.charAt(0).toUpperCase() : (role === 'patient' ? 'P' : 'C')}
             </div>
             <div>
-              <p className="text-sm font-bold text-navy">{role === 'patient' ? 'John Doe' : 'Caregiver Nurse'}</p>
+              <p className="text-sm font-bold text-navy">{userData?.name || (role === 'patient' ? 'Patient' : 'Caregiver')}</p>
               <p className="text-xs text-muted capitalize">{role} Account</p>
             </div>
           </div>
@@ -124,7 +134,7 @@ const MainLayout = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-background w-full pt-20">
+      <main className="flex-1 overflow-y-auto bg-background w-full pt-20 md:pt-8 md:pl-72">
         <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
           <Outlet />
         </div>

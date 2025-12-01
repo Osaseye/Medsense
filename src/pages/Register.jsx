@@ -1,10 +1,42 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FaUser, FaEnvelope, FaLock, FaArrowRight, FaUserNurse, FaUserInjured } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaUser, FaEnvelope, FaLock, FaArrowRight, FaUserNurse, FaUserInjured, FaEye, FaEyeSlash, FaSpinner } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 
 const Register = () => {
   const [step, setStep] = useState(1);
   const [role, setRole] = useState('patient');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { signup } = useAuth();
+  const { error, success } = useNotification();
+  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await signup(formData.email, formData.password, role, formData.name);
+      success('Account created successfully!');
+      navigate('/dashboard');
+    } catch (err) {
+      console.error(err);
+      error(err.message.replace('Firebase: ', ''));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -79,11 +111,7 @@ const Register = () => {
               </button>
             </div>
           ) : (
-            <form className="space-y-5 animate-fade-in" onSubmit={(e) => {
-              e.preventDefault();
-              localStorage.setItem('userRole', role);
-              window.location.href = '/dashboard';
-            }}>
+            <form className="space-y-5 animate-fade-in" onSubmit={handleRegister}>
               <div>
                 <label className="block text-sm font-medium text-navy mb-1">Full Name</label>
                 <div className="relative">
@@ -92,8 +120,12 @@ const Register = () => {
                   </div>
                   <input 
                     type="text" 
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-blue-100 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
                     placeholder="John Doe"
+                    required
                   />
                 </div>
               </div>
@@ -106,8 +138,12 @@ const Register = () => {
                   </div>
                   <input 
                     type="email" 
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-blue-100 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
                     placeholder="you@example.com"
+                    required
                   />
                 </div>
               </div>
@@ -119,10 +155,21 @@ const Register = () => {
                     <FaLock />
                   </div>
                   <input 
-                    type="password" 
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-blue-100 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-blue-100 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
                     placeholder="••••••••"
+                    required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted hover:text-primary transition-colors"
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </button>
                 </div>
               </div>
 
@@ -134,8 +181,12 @@ const Register = () => {
                 >
                   Back
                 </button>
-                <button type="submit" className="flex-[2] bg-primary text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-primary/30 text-center">
-                  Create Account
+                <button 
+                  type="submit" 
+                  disabled={isLoading}
+                  className="flex-[2] bg-primary text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-primary/30 text-center disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isLoading ? <><FaSpinner className="animate-spin" /> Creating...</> : 'Create Account'}
                 </button>
               </div>
             </form>
@@ -149,5 +200,6 @@ const Register = () => {
     </div>
   );
 };
+
 
 export default Register;

@@ -1,64 +1,133 @@
-import { FaUserFriends, FaUserPlus, FaShieldAlt, FaEnvelope, FaEllipsisH, FaPlus } from 'react-icons/fa';
-import { useState } from 'react';
+import { FaUserFriends, FaUserPlus, FaShieldAlt, FaEnvelope, FaEllipsisH, FaPlus, FaSearch } from 'react-icons/fa';
+import { useState, useEffect } from 'react';
 import Modal from '../components/Modal';
 import { useNotification } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
+import { collection, addDoc, onSnapshot, query, updateDoc, arrayUnion, doc, where, getDocs, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const Caregiver = () => {
-  const { success, info } = useNotification();
+  const { success, info, error } = useNotification();
+  const { currentUser, userData } = useAuth();
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [inviteForm, setInviteForm] = useState({
-    name: '',
-    email: '',
-    relation: '',
-    role: 'Viewer'
-  });
+  
+  const [caregivers, setCaregivers] = useState([]); // My connected caregivers
+  const [availableCaregivers, setAvailableCaregivers] = useState([]); // All caregivers in system
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const [caregivers, setCaregivers] = useState([
-    {
-      id: 1,
-      name: 'Sarah Johnson',
-      relation: 'Daughter',
-      email: 'sarah.j@example.com',
-      role: 'Admin',
-      status: 'Active',
-      avatar: 'SJ'
-    },
-    {
-      id: 2,
-      name: 'Dr. James Wilson',
-      relation: 'Doctor',
-      email: 'dr.wilson@clinic.com',
-      role: 'Viewer',
-      status: 'Pending',
-      avatar: 'JW'
+  // Fetch my connected caregivers
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const q = query(collection(db, "users", currentUser.uid, "caregivers"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const caregiversData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setCaregivers(caregiversData);
+      setLoading(false);
+    }, (err) => {
+      console.error("Error fetching caregivers:", err);
+      error("Failed to load caregivers");
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser, error]);
+
+  // Fetch all available caregivers when modal opens
+  useEffect(() => {
+    if (isInviteModalOpen) {
+      const fetchCaregivers = async () => {
+        try {
+          const q = query(collection(db, "users"), where("role", "==", "caregiver"));
+          const snapshot = await getDocs(q);
+          const data = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setAvailableCaregivers(data);
+        } catch (err) {
+          console.error("Error fetching available caregivers:", err);
+        }
+      };
+      fetchCaregivers();
     }
-  ]);
+  }, [isInviteModalOpen]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setInviteForm(prev => ({ ...prev, [name]: value }));
+  const handleManualInvite = async () => {
+    if (!currentUser || !searchTerm) return;
+    const email = searchTerm.toLowerCase().trim();
+
+    try {
+       // 1. Add to my caregivers list as Pending (using email as ID since we don't have UID)
+       await addDoc(collection(db, "users", currentUser.uid, "caregivers"), {
+        name: email.split('@')[0],
+        email: email,
+        relation: 'Caregiver',
+        role: 'Viewer',
+        status: 'Pending',
+        avatar: email.charAt(0).toUpperCase(),
+        createdAt: new Date().toISOString()
+      });
+
+      // 2. Update main user document
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        caregiverEmails: arrayUnion(email)
+      });
+
+      success(`Invitation sent to ${email}`);
+      setIsInviteModalOpen(false);
+      setSearchTerm('');
+    } catch (err) {
+       console.error("Error sending manual invite:", err);
+       error("Failed to send invitation");
+    }
   };
 
-  const handleInvite = (e) => {
-    e.preventDefault();
-    const newCaregiver = {
-      id: Date.now(),
-      name: inviteForm.name,
-      relation: inviteForm.relation,
-      email: inviteForm.email,
-      role: inviteForm.role,
-      status: 'Pending',
-      avatar: inviteForm.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
-    };
-    setCaregivers([...caregivers, newCaregiver]);
-    success(`Invitation sent to ${inviteForm.email}`);
-    setIsInviteModalOpen(false);
-    setInviteForm({ name: '', email: '', relation: '', role: 'Viewer' });
+  const handleSendInvite = async (caregiver) => {
+    if (!currentUser) return;
+
+    try {
+      // 1. Create invitation in caregiver's collection
+      await addDoc(collection(db, "users", caregiver.id, "invitations"), {
+        patientId: currentUser.uid,
+        patientName: userData?.name || currentUser.email,
+        patientEmail: currentUser.email.toLowerCase(),
+        status: 'pending',
+        timestamp: new Date().toISOString()
+      });
+
+      // 2. Add to my caregivers list as Pending
+      // We use the caregiver's UID as the doc ID to easily update it later
+      await setDoc(doc(db, "users", currentUser.uid, "caregivers", caregiver.id), {
+        name: caregiver.name || 'Unknown',
+        email: caregiver.email.toLowerCase(),
+        relation: 'Caregiver', // Default
+        role: 'Viewer', // Default
+        status: 'Pending',
+        avatar: (caregiver.name || 'C').substring(0, 2).toUpperCase(),
+        createdAt: new Date().toISOString()
+      });
+
+      success(`Invitation sent to ${caregiver.name}`);
+      setIsInviteModalOpen(false);
+    } catch (err) {
+      console.error("Error sending invitation:", err);
+      error("Failed to send invitation");
+    }
   };
 
   const handleManagePermissions = (name) => {
     info(`Managing permissions for ${name}`);
   };
+
+  const filteredAvailableCaregivers = availableCaregivers.filter(c => 
+    c.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    c.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -79,107 +148,122 @@ const Caregiver = () => {
       <Modal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
-        title="Invite Caregiver"
+        title="Find a Caregiver"
       >
-        <form className="space-y-4" onSubmit={handleInvite}>
-          <div>
-            <label className="block text-sm font-bold text-navy mb-1">Name</label>
+        <div className="space-y-4">
+          <div className="relative">
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input 
               type="text" 
-              name="name"
-              value={inviteForm.name}
-              onChange={handleInputChange}
-              className="w-full p-3 rounded-xl border border-blue-100 focus:border-primary outline-none" 
-              placeholder="e.g. John Doe" 
-              required 
+              placeholder="Search by name or email..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 p-3 rounded-xl border border-blue-100 focus:border-primary outline-none"
             />
           </div>
-          <div>
-            <label className="block text-sm font-bold text-navy mb-1">Email</label>
-            <input 
-              type="email" 
-              name="email"
-              value={inviteForm.email}
-              onChange={handleInputChange}
-              className="w-full p-3 rounded-xl border border-blue-100 focus:border-primary outline-none" 
-              placeholder="e.g. john@example.com" 
-              required 
-            />
+
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {filteredAvailableCaregivers.length > 0 ? (
+              filteredAvailableCaregivers.map(caregiver => {
+                const isAlreadyConnected = caregivers.some(c => c.id === caregiver.id);
+                return (
+                  <div key={caregiver.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-primary font-bold">
+                        {(caregiver.name || 'C').charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-bold text-navy">{caregiver.name}</p>
+                        <p className="text-xs text-muted">{caregiver.email}</p>
+                      </div>
+                    </div>
+                    {isAlreadyConnected ? (
+                      <span className="text-xs font-bold text-muted bg-gray-200 px-3 py-1 rounded-full">
+                        {caregivers.find(c => c.id === caregiver.id)?.status}
+                      </span>
+                    ) : (
+                      <button 
+                        onClick={() => handleSendInvite(caregiver)}
+                        className="text-sm bg-primary text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-600 transition-colors"
+                      >
+                        Invite
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-muted mb-4">No registered caregivers found.</p>
+                {searchTerm.includes('@') && (
+                  <button 
+                    onClick={handleManualInvite}
+                    className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-600 transition-colors"
+                  >
+                    Invite {searchTerm}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-bold text-navy mb-1">Relation</label>
-              <input 
-                type="text" 
-                name="relation"
-                value={inviteForm.relation}
-                onChange={handleInputChange}
-                className="w-full p-3 rounded-xl border border-blue-100 focus:border-primary outline-none" 
-                placeholder="e.g. Doctor" 
-                required 
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-navy mb-1">Role</label>
-              <select 
-                name="role"
-                value={inviteForm.role}
-                onChange={handleInputChange}
-                className="w-full p-3 rounded-xl border border-blue-100 focus:border-primary outline-none"
-              >
-                <option>Viewer</option>
-                <option>Admin</option>
-              </select>
-            </div>
-          </div>
-          <button type="submit" className="w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition-colors">
-            Send Invitation
-          </button>
-        </form>
+          
+          {/* Helper text */}
+          <p className="text-xs text-muted text-center pt-2 border-t border-gray-50">
+            Can't find them? Type their email to invite them directly.
+          </p>
+        </div>
       </Modal>
 
       {/* Caregivers List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {caregivers.map((person) => (
-          <div key={person.id} className="bg-white p-6 rounded-3xl shadow-sm border border-blue-50 hover:shadow-md transition-all">
-            <div className="flex justify-between items-start mb-6">
-              <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-primary font-bold text-xl border-2 border-white shadow-sm">
-                {person.avatar}
+        {loading ? (
+          <p className="text-muted col-span-full text-center">Loading caregivers...</p>
+        ) : caregivers.length > 0 ? (
+          caregivers.map((person) => (
+            <div key={person.id} className="bg-white p-6 rounded-3xl shadow-sm border border-blue-50 hover:shadow-md transition-all">
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-primary font-bold text-xl border-2 border-white shadow-sm">
+                  {person.avatar}
+                </div>
+                <button className="text-muted hover:text-primary transition-colors">
+                  <FaEllipsisH />
+                </button>
               </div>
-              <button className="text-muted hover:text-primary transition-colors">
-                <FaEllipsisH />
-              </button>
-            </div>
 
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-navy">{person.name}</h3>
-              <p className="text-muted font-medium">{person.relation}</p>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              <div className="flex items-center gap-3 text-sm text-muted">
-                <FaEnvelope className="text-primary" /> {person.email}
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-navy">{person.name}</h3>
+                <p className="text-muted font-medium">{person.relation}</p>
               </div>
-              <div className="flex items-center gap-3 text-sm text-muted">
-                <FaShieldAlt className="text-primary" /> {person.role} Access
+
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center gap-3 text-sm text-muted">
+                  <FaEnvelope className="text-primary" /> {person.email}
+                </div>
+                <div className="flex items-center gap-3 text-sm text-muted">
+                  <FaShieldAlt className="text-primary" /> {person.role} Access
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  person.status === 'Active' ? 'bg-green-100 text-success' : 'bg-yellow-100 text-yellow-700'
+                }`}>
+                  {person.status}
+                </span>
+                <button 
+                  onClick={() => handleManagePermissions(person.name)}
+                  className="text-sm font-bold text-primary hover:underline"
+                >
+                  Manage Permissions
+                </button>
               </div>
             </div>
-
-            <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                person.status === 'Active' ? 'bg-green-100 text-success' : 'bg-yellow-100 text-yellow-700'
-              }`}>
-                {person.status}
-              </span>
-              <button 
-                onClick={() => handleManagePermissions(person.name)}
-                className="text-sm font-bold text-primary hover:underline"
-              >
-                Manage Permissions
-              </button>
-            </div>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-8 text-muted">
+            No caregivers added yet.
           </div>
-        ))}
+        )}
 
         {/* Add New Placeholder */}
         <button 

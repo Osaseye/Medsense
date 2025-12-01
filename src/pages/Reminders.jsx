@@ -17,6 +17,7 @@ const Reminders = () => {
   const [newReminder, setNewReminder] = useState({
     time: '',
     label: '',
+    date: '', // Optional specific date
     selectedMedicationId: ''
   });
 
@@ -36,6 +37,7 @@ const Reminders = () => {
     setNewReminder({
       time: reminder.time,
       label: reminder.label,
+      date: reminder.date || '',
       selectedMedicationId: med ? med.id : ''
     });
     setIsAddModalOpen(true);
@@ -54,32 +56,31 @@ const Reminders = () => {
     const selectedMed = medications.find(m => m.id.toString() === newReminder.selectedMedicationId.toString());
     const medName = selectedMed ? selectedMed.name : 'Unknown Med';
 
+    const reminderData = {
+      time: newReminder.time,
+      label: newReminder.label,
+      date: newReminder.date || null, // Save date if present
+      medications: [medName]
+    };
+
     if (isEditMode) {
-      updateReminder(editingId, {
-        time: newReminder.time,
-        label: newReminder.label,
-        medications: [medName]
-      });
+      updateReminder(editingId, reminderData);
       success('Reminder updated!');
     } else {
-      addReminder({
-        time: newReminder.time,
-        label: newReminder.label,
-        medications: [medName]
-      });
+      addReminder(reminderData);
       success('New reminder set!');
     }
     
     setIsAddModalOpen(false);
     setIsEditMode(false);
     setEditingId(null);
-    setNewReminder({ time: '', label: '', selectedMedicationId: '' });
+    setNewReminder({ time: '', label: '', date: '', selectedMedicationId: '' });
   };
 
   const openAddModal = () => {
     setIsEditMode(false);
     setEditingId(null);
-    setNewReminder({ time: '', label: '', selectedMedicationId: '' });
+    setNewReminder({ time: '', label: '', date: '', selectedMedicationId: '' });
     setIsAddModalOpen(true);
   };
 
@@ -115,6 +116,17 @@ const Reminders = () => {
               className="w-full p-3 rounded-xl border border-blue-100 focus:border-primary outline-none" 
               required 
             />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-navy mb-1">Date (Optional)</label>
+            <input 
+              type="date" 
+              name="date"
+              value={newReminder.date}
+              onChange={handleInputChange}
+              className="w-full p-3 rounded-xl border border-blue-100 focus:border-primary outline-none" 
+            />
+            <p className="text-xs text-muted mt-1">Leave blank for daily reminder</p>
           </div>
           <div>
             <label className="block text-sm font-bold text-navy mb-1">Label</label>
@@ -158,12 +170,17 @@ const Reminders = () => {
               
               <div className="flex items-center gap-6 w-full md:w-auto">
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl shadow-inner ${reminder.active ? 'bg-blue-50' : 'bg-gray-50 grayscale'}`}>
-                  {reminder.icon}
+                  <FaClock />
                 </div>
                 <div>
                   <div className="flex items-center gap-3 mb-1">
                     <h3 className="text-xl font-bold text-navy">{reminder.time}</h3>
                     <span className="text-sm font-bold text-muted bg-gray-100 px-2 py-0.5 rounded-md">{reminder.label}</span>
+                    {reminder.date && (
+                      <span className="text-xs font-bold text-primary bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                        {new Date(reminder.date).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
                   <p className="text-muted font-medium flex items-center gap-2">
                     <FaBell className="text-xs" />

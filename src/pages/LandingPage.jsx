@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaShieldAlt, FaHeartbeat, FaUserNurse, FaBell, FaChartLine, FaLock, FaBars, FaTimes, FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from 'react-icons/fa';
+import { FaShieldAlt, FaHeartbeat, FaUserNurse, FaBell, FaChartLine, FaLock, FaCheck, FaClock, FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from 'react-icons/fa';
+import ctaBg from '../assets/cta-bg.jpg';
 
 const LandingPage = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [heroState, setHeroState] = useState('due'); // due, taken, snoozed
+
+  const handleTake = () => setHeroState('taken');
+  const handleSnooze = () => setHeroState('snoozed');
 
   return (
     <div className="min-h-screen bg-background font-sans text-navy overflow-x-hidden">
@@ -25,31 +29,16 @@ const LandingPage = () => {
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button 
-            className="md:hidden text-2xl text-navy"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <FaTimes /> : <FaBars />}
-          </button>
+          {/* Mobile Join Button (Replaces Hamburger) */}
+          <Link to="/login" className="md:hidden bg-primary text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-blue-600 transition-colors shadow-lg shadow-primary/30">
+            Join Now
+          </Link>
         </div>
-
-        {/* Mobile Menu Dropdown */}
-        {isMenuOpen && (
-          <div className="absolute top-full left-0 w-full bg-white shadow-xl border-t border-gray-100 p-6 flex flex-col gap-4 md:hidden animate-fade-in">
-            <a href="#features" className="text-navy font-medium py-2" onClick={() => setIsMenuOpen(false)}>Features</a>
-            <a href="#how-it-works" className="text-navy font-medium py-2" onClick={() => setIsMenuOpen(false)}>How it Works</a>
-            <Link to="/login" className="text-navy font-medium py-2" onClick={() => setIsMenuOpen(false)}>Log In</Link>
-            <Link to="/login" className="bg-primary text-white px-6 py-3 rounded-lg font-medium text-center shadow-lg" onClick={() => setIsMenuOpen(false)}>
-              Get Started
-            </Link>
-          </div>
-        )}
       </nav>
 
       {/* Hero Section */}
-      <header className="container mx-auto px-6 py-12 md:py-24 flex flex-col-reverse md:flex-row items-center gap-12">
-        <div className="flex-1 space-y-6 text-center md:text-left z-10">
+      <header className="container mx-auto px-6 py-12 md:py-24 flex flex-col md:flex-row items-center gap-12">
+        <div className="flex-1 space-y-6 text-center md:text-left z-10 order-1 md:order-1">
           <div className="inline-block px-4 py-1 bg-blue-50 text-primary rounded-full text-sm font-semibold tracking-wide animate-fade-in-up">
             HEALTHCARE REIMAGINED
           </div>
@@ -72,57 +61,76 @@ const LandingPage = () => {
           </div>
         </div>
         
-        <div className="flex-1 relative w-full flex justify-center">
+        <div className="flex-1 relative w-full flex justify-center order-2 md:order-2">
           {/* Background Blobs */}
           <div className="absolute top-0 right-0 w-72 h-72 bg-secondary/20 rounded-full blur-3xl animate-pulse-slow"></div>
           <div className="absolute bottom-0 left-0 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse-slow delay-1000"></div>
           
           {/* Interactive Card Container */}
           <div className="relative z-10 w-full max-w-md">
-            {/* Floating Elements */}
-            <div className="absolute -top-6 -right-6 bg-white p-4 rounded-2xl shadow-lg animate-float z-20 hidden md:block">
-              <FaHeartbeat className="text-3xl text-error" />
-            </div>
-            <div className="absolute -bottom-8 -left-8 bg-white p-4 rounded-2xl shadow-lg animate-float-delayed z-20 hidden md:block">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-success rounded-full"></div>
-                <span className="font-bold text-navy text-sm">Taken</span>
-              </div>
-            </div>
-
             {/* Main Card */}
             <div className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl border border-blue-50 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-blue-200/50">
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-primary text-2xl">
-                    <FaBell />
+              {heroState === 'due' && (
+                <div className="animate-fade-in">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-primary text-2xl">
+                        <FaBell />
+                      </div>
+                      <div>
+                        <p className="font-heading font-bold text-xl text-navy">Amoxicillin</p>
+                        <p className="text-muted">500mg • With food</p>
+                      </div>
+                    </div>
+                    <span className="bg-blue-50 text-primary px-3 py-1 rounded-full text-xs font-bold">NOW</span>
                   </div>
-                  <div>
-                    <p className="font-heading font-bold text-xl text-navy">Amoxicillin</p>
-                    <p className="text-muted">500mg • With food</p>
+                  
+                  <div className="space-y-3 mb-8">
+                    <div className="h-2 bg-blue-50 rounded-full w-full overflow-hidden">
+                      <div className="h-full w-2/3 bg-primary rounded-full"></div>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted font-medium">
+                      <span>Progress</span>
+                      <span>66%</span>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <button onClick={handleTake} className="bg-success text-white py-3 rounded-xl font-bold text-sm hover:bg-green-600 transition-colors shadow-lg shadow-success/20">
+                      Take Now
+                    </button>
+                    <button onClick={handleSnooze} className="bg-blue-50 text-muted py-3 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors">
+                      Snooze
+                    </button>
                   </div>
                 </div>
-                <span className="bg-blue-50 text-primary px-3 py-1 rounded-full text-xs font-bold">NOW</span>
-              </div>
-              
-              <div className="space-y-3 mb-8">
-                <div className="h-2 bg-blue-50 rounded-full w-full overflow-hidden">
-                  <div className="h-full w-2/3 bg-primary rounded-full"></div>
+              )}
+
+              {heroState === 'taken' && (
+                <div className="text-center py-8 animate-fade-in">
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-success text-4xl mx-auto mb-6">
+                    <FaCheck />
+                  </div>
+                  <h3 className="text-2xl font-bold text-navy mb-2">Great Job!</h3>
+                  <p className="text-muted mb-6">You've taken your medication on time.</p>
+                  <button onClick={() => setHeroState('due')} className="text-primary font-bold hover:underline">
+                    Undo
+                  </button>
                 </div>
-                <div className="flex justify-between text-xs text-muted font-medium">
-                  <span>Progress</span>
-                  <span>66%</span>
+              )}
+
+              {heroState === 'snoozed' && (
+                <div className="text-center py-8 animate-fade-in">
+                  <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-4xl mx-auto mb-6">
+                    <FaClock />
+                  </div>
+                  <h3 className="text-2xl font-bold text-navy mb-2">Snoozed</h3>
+                  <p className="text-muted mb-6">We'll remind you again in 15 minutes.</p>
+                  <button onClick={() => setHeroState('due')} className="bg-primary text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-600 transition-colors">
+                    Take Now
+                  </button>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <button className="bg-success text-white py-3 rounded-xl font-bold text-sm hover:bg-green-600 transition-colors shadow-lg shadow-success/20">
-                  Take Now
-                </button>
-                <button className="bg-blue-50 text-muted py-3 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors">
-                  Snooze
-                </button>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -172,11 +180,7 @@ const LandingPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-navy text-white relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-10">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-primary rounded-full blur-3xl animate-pulse-slow"></div>
-          <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-secondary rounded-full blur-3xl animate-pulse-slow delay-1000"></div>
-        </div>
+      <section className="py-24 bg-navy text-white relative overflow-hidden bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `linear-gradient(rgba(10, 25, 47, 0.85), rgba(10, 25, 47, 0.95)), url(${ctaBg})` }}>
         <div className="container mx-auto px-6 relative z-10 text-center">
           <h2 className="text-3xl md:text-5xl font-heading font-bold mb-6">Ready to take control?</h2>
           <p className="text-blue-100 mb-10 max-w-xl mx-auto text-lg">Join thousands of users who trust MedSense for their daily medication management.</p>
@@ -250,8 +254,8 @@ const LandingPage = () => {
 };
 
 const FeatureCard = ({ icon, title, desc }) => (
-  <div className="p-8 rounded-3xl bg-white border border-blue-50 hover:shadow-xl hover:shadow-blue-100/50 transition-all duration-300 hover:-translate-y-1 group">
-    <div className="w-14 h-14 rounded-2xl bg-blue-50 text-primary flex items-center justify-center text-2xl mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
+  <div className="p-8 rounded-3xl bg-white border border-blue-50 hover:shadow-xl hover:shadow-blue-100/50 transition-all duration-300 hover:-translate-y-1 group text-center">
+    <div className="w-14 h-14 rounded-2xl bg-blue-50 text-primary flex items-center justify-center text-2xl mb-6 mx-auto group-hover:bg-primary group-hover:text-white transition-colors">
       {icon}
     </div>
     <h3 className="text-xl font-heading font-bold text-navy mb-3">{title}</h3>

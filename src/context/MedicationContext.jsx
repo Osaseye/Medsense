@@ -1,87 +1,82 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useNotification } from './NotificationContext';
+import { useAuth } from './AuthContext';
+import { db } from '../firebase';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query } from 'firebase/firestore';
 
 const MedicationContext = createContext();
 
 export const useMedication = () => useContext(MedicationContext);
 
 export const MedicationProvider = ({ children }) => {
-  const { success } = useNotification();
-  
-  const [medications, setMedications] = useState([
-    {
-      id: 1,
-      name: 'Amoxicillin',
-      dosage: '500mg',
-      type: 'Capsule',
-      frequency: 'Twice daily',
-      instructions: 'Take with food',
-      refills: 2,
-      remaining: 14,
-      total: 30,
-      color: 'bg-blue-100 text-primary'
-    },
-    {
-      id: 2,
-      name: 'Lisinopril',
-      dosage: '10mg',
-      type: 'Tablet',
-      frequency: 'Once daily',
-      instructions: 'Take in the morning',
-      refills: 5,
-      remaining: 25,
-      total: 30,
-      color: 'bg-indigo-100 text-indigo-600'
-    },
-    {
-      id: 3,
-      name: 'Vitamin D3',
-      dosage: '2000 IU',
-      type: 'Softgel',
-      frequency: 'Once daily',
-      instructions: 'Take with a meal',
-      refills: 0,
-      remaining: 5,
-      total: 90,
-      color: 'bg-yellow-100 text-yellow-600'
-    },
-    {
-      id: 4,
-      name: 'Metformin',
-      dosage: '500mg',
-      type: 'Tablet',
-      frequency: 'Twice daily',
-      instructions: 'Take with evening meal',
-      refills: 1,
-      remaining: 45,
-      total: 60,
-      color: 'bg-green-100 text-green-600'
+  const { success, error } = useNotification();
+  const { currentUser } = useAuth();
+  const [medications, setMedications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setMedications([]);
+      setLoading(false);
+      return;
     }
-  ]);
 
-  const addMedication = (med) => {
-    const newMed = {
-      ...med,
-      id: Date.now(),
-      remaining: med.total || 30,
-      color: 'bg-blue-100 text-primary' // Default color for now
-    };
-    setMedications([...medications, newMed]);
-    success('Medication added successfully');
+    const q = query(collection(db, 'users', currentUser.uid, 'medications'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const meds = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setMedications(meds);
+      setLoading(false);
+    }, (err) => {
+      console.error(err);
+      error('Failed to fetch medications');
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [currentUser]);
+
+  const addMedication = async (med) => {
+    if (!currentUser) return;
+    try {
+      await addDoc(collection(db, 'users', currentUser.uid, 'medications'), {
+        ...med,
+        createdAt: new Date().toISOString(),
+        color: 'bg-blue-100 text-primary' // Default
+      });
+      success('Medication added successfully');
+    } catch (err) {
+      console.error(err);
+      error('Failed to add medication');
+    }
   };
 
-  const updateMedication = (id, updatedMed) => {
-    setMedications(medications.map(med => med.id === id ? { ...med, ...updatedMed } : med));
-    success('Medication updated');
+  const updateMedication = async (id, updatedMed) => {
+    if (!currentUser) return;
+    try {
+      await updateDoc(doc(db, 'users', currentUser.uid, 'medications', id), updatedMed);
+      success('Medication updated');
+    } catch (err) {
+      console.error(err);
+      error('Failed to update medication');
+    }
   };
 
-  const deleteMedication = (id) => {
-    setMedications(medications.filter(med => med.id !== id));
-    success('Medication deleted');
+  const deleteMedication = async (id) => {
+    if (!currentUser) return;
+    try {
+      await deleteDoc(doc(db, 'users', currentUser.uid, 'medications', id));
+      success('Medication deleted');
+    } catch (err) {
+      console.error(err);
+      error('Failed to delete medication');
+    }
   };
 
   return (
-    <MedicationContext.Provider value={{ medications, addMedication, updateMedication, deleteMedication }}>
+    <MedicationContext.Provider value={{ medications, addMedication, updateMedication, deleteMedication, loading }}>
       {children}
     </MedicationContext.Provider>
   );
