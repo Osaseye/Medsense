@@ -320,7 +320,7 @@ If you encounter any issues or have questions:
 - Built with ❤️ for better healthcare adherence
 - Firebase for backend infrastructure
 - React community for amazing tools and libraries
-- All contributors who help improve MedSense
+
 
 ---
 
