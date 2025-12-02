@@ -12,10 +12,12 @@ import Prescriptions from './pages/Prescriptions';
 import Caregiver from './pages/Caregiver';
 import Settings from './pages/Settings';
 import Patients from './pages/Patients';
+import InAppReminderAlert from './components/InAppReminderAlert';
 
 function App() {
   return (
     <BrowserRouter>
+      <InAppReminderAlert />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />

@@ -44,10 +44,41 @@ export const NotificationProvider = ({ children }) => {
     return false;
   }, []);
 
-  const sendSystemNotification = useCallback((title, body) => {
+  const sendSystemNotification = useCallback(async (title, body, options = {}) => {
     if (!('Notification' in window)) return;
 
-    if (Notification.permission === 'granted') {
+    if (Notification.permission !== 'granted') return;
+
+    try {
+      // Check if running as PWA or has service worker
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        // Use Service Worker for notifications (better for Android PWA)
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification(title, {
+          body,
+          icon: '/logo.png',
+          badge: '/logo.png',
+          vibrate: [200, 100, 200],
+          tag: options.tag || 'medsense-notification',
+          requireInteraction: false,
+          silent: false,
+          ...options
+        });
+      } else {
+        // Fallback to regular Notification API
+        new Notification(title, {
+          body,
+          icon: '/logo.png',
+          badge: '/logo.png',
+          vibrate: [200, 100, 200],
+          tag: options.tag || 'medsense-notification',
+          requireInteraction: false,
+          ...options
+        });
+      }
+    } catch (e) {
+      console.error("Notification error:", e);
+      // Fallback to basic notification
       try {
         new Notification(title, {
           body,
@@ -55,25 +86,25 @@ export const NotificationProvider = ({ children }) => {
           badge: '/logo.png',
           vibrate: [200, 100, 200]
         });
-      } catch (e) {
-        console.error("Notification error:", e);
+      } catch (err) {
+        console.error("Fallback notification also failed:", err);
       }
     }
   }, []);
 
   const success = (msg) => {
     addNotification('success', msg);
-    sendSystemNotification('Success', msg);
+    // Don't send system notification for UI feedback messages
   };
 
   const error = (msg) => {
     addNotification('error', msg);
-    sendSystemNotification('Error', msg);
+    // Don't send system notification for UI feedback messages
   };
 
   const info = (msg) => {
     addNotification('info', msg);
-    sendSystemNotification('Info', msg);
+    // Don't send system notification for UI feedback messages
   };
 
   return (

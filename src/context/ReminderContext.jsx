@@ -71,7 +71,12 @@ export const ReminderProvider = ({ children }) => {
         if (reminder.time === currentTime) {
           sendSystemNotification(
             `Time for your ${reminder.label}`, 
-            `Take: ${reminder.medications.join(', ')}`
+            `Take: ${reminder.medications.join(', ')}`,
+            {
+              tag: `reminder-${reminder.id}-now`,
+              requireInteraction: true,
+              vibrate: [300, 100, 300, 100, 300]
+            }
           );
         }
 
@@ -79,7 +84,12 @@ export const ReminderProvider = ({ children }) => {
         if (reminder.time === timeInFiveMins) {
           sendSystemNotification(
             `Upcoming Dose: ${reminder.label}`, 
-            `Prepare to take ${reminder.medications.join(', ')} in 5 minutes.`
+            `Prepare to take ${reminder.medications.join(', ')} in 5 minutes.`,
+            {
+              tag: `reminder-${reminder.id}-soon`,
+              requireInteraction: false,
+              vibrate: [200, 100, 200]
+            }
           );
         }
       });
