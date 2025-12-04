@@ -8,7 +8,9 @@ const Medications = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedMed, setSelectedMed] = useState(null);
-  const { medications, addMedication, deleteMedication } = useMedication();
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const { medications, addMedication, deleteMedication, updateMedication } = useMedication();
 
   const [newMed, setNewMed] = useState({
     name: '',
@@ -31,7 +33,7 @@ const Medications = () => {
 
   const handleAddMedication = (e) => {
     e.preventDefault();
-    const medicationToAdd = {
+    const medicationData = {
       name: newMed.name,
       dosage: newMed.dosage,
       type: newMed.type,
@@ -42,14 +44,40 @@ const Medications = () => {
       total: 30,
     };
     
-    addMedication(medicationToAdd);
+    if (isEditMode && editId) {
+      updateMedication(editId, medicationData);
+    } else {
+      addMedication(medicationData);
+    }
+    
     setIsAddModalOpen(false);
+    resetForm();
+  };
+
+  const resetForm = () => {
     setNewMed({ name: '', dosage: '', type: 'Tablet', instructions: '' });
+    setIsEditMode(false);
+    setEditId(null);
   };
 
   const handleViewMedication = (med) => {
     setSelectedMed(med);
     setIsViewModalOpen(true);
+  };
+
+  const handleEditMedication = () => {
+    if (selectedMed) {
+      setNewMed({
+        name: selectedMed.name,
+        dosage: selectedMed.dosage,
+        type: selectedMed.type,
+        instructions: selectedMed.instructions || ''
+      });
+      setEditId(selectedMed.id);
+      setIsEditMode(true);
+      setIsViewModalOpen(false);
+      setIsAddModalOpen(true);
+    }
   };
 
   const handleDeleteMedication = () => {
@@ -69,7 +97,10 @@ const Medications = () => {
           <p className="text-muted text-lg">Manage your active prescriptions and supplements.</p>
         </div>
         <button 
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => {
+            resetForm();
+            setIsAddModalOpen(true);
+          }}
           className="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-600 transition-all shadow-lg shadow-primary/30 flex items-center gap-2 hover:-translate-y-1"
         >
           <FaPlus /> Add New Medication
@@ -79,7 +110,7 @@ const Medications = () => {
       <Modal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 
-        title="Add New Medication"
+        title={isEditMode ? "Edit Medication" : "Add New Medication"}
       >
         <form className="space-y-4" onSubmit={handleAddMedication}>
           <div>
@@ -134,7 +165,7 @@ const Medications = () => {
             ></textarea>
           </div>
           <button type="submit" className="w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition-colors">
-            Save Medication
+            {isEditMode ? "Update Medication" : "Save Medication"}
           </button>
         </form>
       </Modal>
@@ -174,7 +205,10 @@ const Medications = () => {
             </div>
 
             <div className="flex gap-3 pt-4 border-t border-gray-100">
-              <button className="flex-1 py-3 rounded-xl border border-blue-100 text-primary font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
+              <button 
+                onClick={handleEditMedication}
+                className="flex-1 py-3 rounded-xl border border-blue-100 text-primary font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+              >
                 <FaPen /> Edit
               </button>
               <button 

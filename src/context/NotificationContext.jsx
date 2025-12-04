@@ -45,46 +45,49 @@ export const NotificationProvider = ({ children }) => {
   }, []);
 
   const sendSystemNotification = useCallback(async (title, body, options = {}) => {
-    if (!('Notification' in window)) return;
+    if (!('Notification' in window)) {
+      console.log("Notifications not supported");
+      return;
+    }
 
-    if (Notification.permission !== 'granted') return;
+    if (Notification.permission !== 'granted') {
+      console.log("Notification permission not granted");
+      return;
+    }
+
+    const notificationOptions = {
+      body,
+      icon: '/logo.png',
+      badge: '/logo.png',
+      vibrate: [200, 100, 200],
+      tag: options.tag || 'medsense-notification',
+      requireInteraction: options.requireInteraction || false,
+      silent: false,
+      ...options
+    };
 
     try {
       // Check if running as PWA or has service worker
+      // Only use Service Worker if it's actually controlling the page (active)
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        // Use Service Worker for notifications (better for Android PWA)
         const registration = await navigator.serviceWorker.ready;
-        await registration.showNotification(title, {
-          body,
-          icon: '/logo.png',
-          badge: '/logo.png',
-          vibrate: [200, 100, 200],
-          tag: options.tag || 'medsense-notification',
-          requireInteraction: false,
-          silent: false,
-          ...options
-        });
-      } else {
-        // Fallback to regular Notification API
-        new Notification(title, {
-          body,
-          icon: '/logo.png',
-          badge: '/logo.png',
-          vibrate: [200, 100, 200],
-          tag: options.tag || 'medsense-notification',
-          requireInteraction: false,
-          ...options
-        });
+        if (registration && registration.showNotification) {
+          await registration.showNotification(title, notificationOptions);
+          console.log("Sent SW notification");
+          return;
+        }
       }
+      
+      // Fallback to regular Notification API
+      new Notification(title, notificationOptions);
+      console.log("Sent standard notification");
     } catch (e) {
       console.error("Notification error:", e);
       // Fallback to basic notification
       try {
         new Notification(title, {
           body,
-          icon: '/logo.png',
-          badge: '/logo.png',
-          vibrate: [200, 100, 200]
+          icon: '/logo.png'
         });
       } catch (err) {
         console.error("Fallback notification also failed:", err);
@@ -94,17 +97,17 @@ export const NotificationProvider = ({ children }) => {
 
   const success = (msg) => {
     addNotification('success', msg);
-    // Don't send system notification for UI feedback messages
+    sendSystemNotification('Success', msg);
   };
 
   const error = (msg) => {
     addNotification('error', msg);
-    // Don't send system notification for UI feedback messages
+    sendSystemNotification('Error', msg);
   };
 
   const info = (msg) => {
     addNotification('info', msg);
-    // Don't send system notification for UI feedback messages
+    sendSystemNotification('Info', msg);
   };
 
   return (

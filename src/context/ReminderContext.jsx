@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { useNotification } from './NotificationContext';
 import { useAuth } from './AuthContext';
 import { db } from '../firebase';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { FaCoffee, FaSun, FaMoon, FaClock } from 'react-icons/fa';
 
 const ReminderContext = createContext();
@@ -19,11 +19,32 @@ export const ReminderProvider = ({ children }) => {
   const { sendSystemNotification, requestSystemPermission } = useNotification();
   const { currentUser } = useAuth();
   const [reminders, setReminders] = useState([]);
+  const [todaysLogs, setTodaysLogs] = useState([]);
 
   // Request permission on mount
   useEffect(() => {
     requestSystemPermission();
   }, [requestSystemPermission]);
+
+  // Fetch today's logs to prevent duplicate notifications
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const startOfDay = new Date(today).toISOString();
+    
+    const q = query(
+      collection(db, "users", currentUser.uid, "logs"),
+      where("timestamp", ">=", startOfDay)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const logs = snapshot.docs.map(doc => doc.data());
+      setTodaysLogs(logs);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   // Fetch reminders from Firestore
   useEffect(() => {
@@ -67,8 +88,22 @@ export const ReminderProvider = ({ children }) => {
         // Check date if specified
         if (reminder.date && reminder.date !== todayString) return;
 
+        // Check if already taken
+        const isTaken = todaysLogs.some(log => 
+          log.reminderId === reminder.id && 
+          log.action === 'taken'
+        );
+
+        if (isTaken) {
+          console.log(`Reminder ${reminder.label} already taken. Skipping.`);
+          return;
+        }
+
+        console.log(`Checking reminder: ${reminder.label} at ${reminder.time} vs ${currentTime}`);
+
         // 1. Check for exact time
         if (reminder.time === currentTime) {
+          console.log("Triggering ON TIME notification");
           sendSystemNotification(
             `Time for your ${reminder.label}`, 
             `Take: ${reminder.medications.join(', ')}`,
@@ -82,6 +117,7 @@ export const ReminderProvider = ({ children }) => {
 
         // 2. Check for 5 minutes before
         if (reminder.time === timeInFiveMins) {
+          console.log("Triggering 5 MIN WARNING notification");
           sendSystemNotification(
             `Upcoming Dose: ${reminder.label}`, 
             `Prepare to take ${reminder.medications.join(', ')} in 5 minutes.`,
@@ -101,7 +137,7 @@ export const ReminderProvider = ({ children }) => {
     checkReminders();
 
     return () => clearInterval(intervalId);
-  }, [reminders, sendSystemNotification]);
+  }, [reminders, todaysLogs, sendSystemNotification]);
 
   const addReminder = async (reminder) => {
     if (!currentUser) return;

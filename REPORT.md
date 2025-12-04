@@ -22,86 +22,65 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 ## Requirements Summary
 
 ### Functional Requirements
-1. **User Authentication & Authorization**
-   - Secure email/password authentication
-   - Role-based access control (Patient/Caregiver)
-   - Profile management
+The system shall authenticate users using a secure email and password method.
 
-2. **Patient Features**
-   - Medication database management (add, edit, delete)
-   - Smart reminder system with customizable schedules
-   - Adherence tracking and visualization
-   - Medication log history
-   - Caregiver invitation and access management
-   - In-app and system notifications
+The system shall authorize users based on their assigned roles (Patient or Caregiver).
 
-3. **Caregiver Features**
-   - Multi-patient dashboard
-   - Real-time adherence monitoring
-   - Patient medication and log viewing
-   - Invitation acceptance system
-   - Alert notifications for missed doses
+The system shall allow users to manage and update their profile information.
 
-4. **System Features**
-   - Real-time data synchronization
-   - Offline data persistence
-   - Progressive Web App capabilities
-   - Cross-platform compatibility
-   - Responsive mobile-first design
+The system shall allow patients to add new medications to their medication list.
+
+The system shall allow patients to edit existing medications.
+
+The system shall allow patients to delete medications from their list.
+
+The system shall provide a smart reminder system that allows patients to set customizable medication schedules.
+
+The system shall track medication adherence automatically.
+
+The system shall provide visualizations of medication adherence.
+
+The system shall store and display a history of all medication logs.
+
+The system shall allow patients to invite caregivers to access their health information.
+
+The system shall allow patients to manage and remove caregiver access.
+
+The system shall send in-app and system notifications for medication reminders.
+
+The system shall provide caregivers with a dashboard for viewing multiple patients.
+
+The system shall allow caregivers to monitor patient adherence in real time.
+
+The system shall allow caregivers to view patient medications and log history.
+
+The system shall allow caregivers to accept or decline patient invitations.
+
+The system shall send alert notifications to caregivers when a patient misses a dose.
+
+The system shall synchronize data across devices in real time.
+
+The system shall provide offline data persistence when the user has no internet connection.
+
+The system shall support Progressive Web App (PWA) capabilities.
+
+The system shall function across multiple platforms.
+
+The system shall use a responsive, mobile-first design.
 
 ### Non-Functional Requirements
-1. **Performance**: Page load times under 2 seconds
-2. **Security**: HIPAA-compliant data encryption
-3. **Usability**: Intuitive UI with minimal learning curve
-4. **Reliability**: 99.9% uptime with offline fallback
-5. **Scalability**: Support for growing user base
+The system shall load all primary pages within 2 seconds.
+The system shall use HIPAA-compliant data encryption for all stored and transmitted data.
+The system shall provide an intuitive user interface that requires minimal learning effort.
+The system shall maintain a minimum uptime of 99.9% and shall provide offline fallback when the network is unavailable.
+The system shall support a growing user base without performance degradation.
 
 ---
 
 ## System Overview
 
 ### Architecture Diagram
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Client Layer                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   Patient    │  │  Caregiver   │  │    PWA       │      │
-│  │  Dashboard   │  │   Portal     │  │  Features    │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│           │                │                  │              │
-│           └────────────────┴──────────────────┘              │
-│                            │                                 │
-└────────────────────────────┼─────────────────────────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │   React Router  │
-                    │   Context API   │
-                    └────────┬────────┘
-                             │
-                    ┌────────▼────────────────────────┐
-                    │     Service Layer               │
-                    │  ┌──────────┐  ┌─────────────┐ │
-                    │  │   Auth   │  │ Reminder    │ │
-                    │  │ Context  │  │  Context    │ │
-                    │  └──────────┘  └─────────────┘ │
-                    │  ┌──────────┐  ┌─────────────┐ │
-                    │  │   Med    │  │ Notification│ │
-                    │  │ Context  │  │  Context    │ │
-                    │  └──────────┘  └─────────────┘ │
-                    └────────┬────────────────────────┘
-                             │
-                    ┌────────▼────────────────────────┐
-                    │   Firebase Backend              │
-                    │  ┌──────────┐  ┌─────────────┐ │
-                    │  │   Auth   │  │  Firestore  │ │
-                    │  │ Service  │  │   Database  │ │
-                    │  └──────────┘  └─────────────┘ │
-                    │  ┌──────────┐  ┌─────────────┐ │
-                    │  │  Offline │  │   Security  │ │
-                    │  │  Persist │  │    Rules    │ │
-                    │  └──────────┘  └─────────────┘ │
-                    └─────────────────────────────────┘
-```
+[Diagram Description: A layered architecture diagram showing Client Layer (Patient Dashboard, Caregiver Portal, PWA Features), Service Layer (React Router, Context API for Auth, Reminder, Med, Notification), and Firebase Backend (Auth Service, Firestore Database, Offline Persist, Security Rules).]
 
 ### System Workflow
 
@@ -134,20 +113,20 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 
 ### Successfully Implemented Features
 
-#### 1. **Authentication & User Management** ✅
+#### 1. **Authentication & User Management**
 - Secure Firebase Authentication with email/password
 - Role-based access control (Patient/Caregiver)
 - User profile management with editable fields
 - Persistent authentication state across sessions
 
-#### 2. **Patient Medication Management** ✅
+#### 2. **Patient Medication Management**
 - Complete CRUD operations for medications
 - Medication database with name, dosage, and frequency
 - Refill alerts when medication count is low
 - Medication history and logs
 - Search and filter capabilities
 
-#### 3. **Smart Reminder System** ✅
+#### 3. **Smart Reminder System**
 - Time-based reminders with date specifications
 - Dual notification system (5-minute warning + on-time alert)
 - Snooze functionality (5-minute delay)
@@ -155,7 +134,7 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 - Reminder edit and delete capabilities
 - Background reminder checking (every 10 seconds)
 
-#### 4. **In-App Notification Alerts** ✅
+#### 4. **In-App Notification Alerts**
 - Beautiful gradient alert cards with sound
 - "Take Now" button for quick medication logging
 - Persistent alerts that don't auto-dismiss
@@ -163,21 +142,21 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 - Web Audio API for cross-platform sound alerts
 - Works on all devices including iOS
 
-#### 5. **System Notifications (Desktop & Android)** ✅
+#### 5. **System Notifications (Desktop & Android)**
 - Browser-based system notifications
 - Service Worker notifications for PWA
 - Vibration patterns for mobile devices
 - Notification permission management
 - Settings page for notification control
 
-#### 6. **Adherence Tracking** ✅
+#### 6. **Adherence Tracking**
 - 7-day adherence score calculation
 - Visual progress indicators
 - Daily medication completion tracking
 - Historical log viewing
 - Status classification (Good/Fair/At Risk)
 
-#### 7. **Caregiver Portal** ✅
+#### 7. **Caregiver Portal**
 - Multi-patient dashboard
 - Real-time adherence monitoring
 - Patient invitation system (standard + manual)
@@ -186,7 +165,7 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 - Activity logs for each patient
 - Search functionality for patient management
 
-#### 8. **Progressive Web App (PWA)** ✅
+#### 8. **Progressive Web App (PWA)**
 - Installable on all platforms
 - Offline data persistence
 - Service Worker caching
@@ -196,14 +175,14 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 - Install prompt for Android
 - iOS installation guide
 
-#### 9. **Responsive Design** ✅
+#### 9. **Responsive Design**
 - Mobile-first approach
 - Floating cylindrical bottom navigation
 - Adaptive layouts for tablet and desktop
 - Touch-friendly interfaces
 - Smooth animations and transitions
 
-#### 10. **Real-time Data Synchronization** ✅
+#### 10. **Real-time Data Synchronization**
 - Firestore real-time listeners
 - Instant updates across devices
 - Conflict resolution
@@ -211,16 +190,16 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 
 ### Incomplete/Limited Features
 
-#### 1. **iOS Push Notifications** ❌
+#### 1. **iOS Push Notifications**
 **Status**: Partially Implemented
 
 **Issue**: iOS Safari and PWAs do not support the Web Push API or Service Worker `showNotification()` for background notifications. This is a platform limitation imposed by Apple.
 
 **Current Behavior**:
-- ✅ In-app notifications work when app is open
-- ✅ Visual and audio alerts function correctly
-- ❌ No background notifications when app is closed
-- ❌ No lock screen notifications
+- In-app notifications work when app is open
+- Visual and audio alerts function correctly
+- No background notifications when app is closed
+- No lock screen notifications
 
 **Workaround Implemented**:
 - Created prominent in-app alert system that displays when app is open
@@ -514,7 +493,7 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 **Found During**: Feature testing  
 **Description**: Accepted invitations remained "Pending"; caregivers couldn't see patients  
 **Fix**: Implemented email normalization and UID-based document storage  
-**Status**: ✅ Resolved
+**Status**: Resolved
 
 ---
 
@@ -523,7 +502,7 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 **Found During**: Reminder system testing  
 **Description**: Same reminder fired multiple times; checkboxes re-enabled  
 **Fix**: Added alert tracking with unique daily keys; synchronized logs  
-**Status**: ✅ Resolved
+**Status**: Resolved
 
 ---
 
@@ -532,7 +511,7 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 **Found During**: Cross-platform testing  
 **Description**: No background notifications on iOS devices  
 **Fix**: Built in-app alert system; documented platform limitation  
-**Status**: ⚠️ Workaround Implemented
+**Status**: Workaround Implemented
 
 ---
 
@@ -541,7 +520,7 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 **Found During**: PWA testing on Android  
 **Description**: Granted notification permission but no alerts appeared  
 **Fix**: Used Service Worker `showNotification()` instead of Notification API  
-**Status**: ✅ Resolved
+**Status**: Resolved
 
 ---
 
@@ -550,7 +529,7 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 **Found During**: Data validation testing  
 **Description**: Adherence calculated incorrectly for edge cases (no logs)  
 **Fix**: Added null checks and default values  
-**Status**: ✅ Resolved
+**Status**: Resolved
 
 ---
 
@@ -559,7 +538,7 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 **Found During**: Offline testing  
 **Description**: Data not persisting when offline; sync failed  
 **Fix**: Enabled Firestore offline persistence and proper Service Worker caching  
-**Status**: ✅ Resolved
+**Status**: Resolved
 
 ---
 
@@ -568,7 +547,7 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 **Found During**: Responsive testing  
 **Description**: Floating nav bar covered bottom content on some screens  
 **Fix**: Added proper padding-bottom to main content area  
-**Status**: ✅ Resolved
+**Status**: Resolved
 
 ---
 
@@ -577,7 +556,7 @@ The system features two distinct user interfaces: a Patient Portal for managing 
 **Found During**: Performance testing  
 **Description**: First page load took 5+ seconds on slow connections  
 **Fix**: Implemented code splitting, lazy loading, and Service Worker caching  
-**Status**: ✅ Resolved
+**Status**: Resolved
 
 ---
 
@@ -706,6 +685,6 @@ With proper deployment, marketing, and potential native iOS app development, Med
 ---
 
 **Project Status**: Production Ready  
-**Deployment**: [https://medicalsense.vercel.app](https://medicalsense.vercel.app)  
+**Deployment**: [https://medsense.vercel.app](https://medsense.vercel.app)  
 **Repository**: [https://github.com/Osaseye/Medsense](https://github.com/Osaseye/Medsense)  
 **Report Date**: December 2, 2025
